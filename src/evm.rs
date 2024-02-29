@@ -1,18 +1,19 @@
-use std::fmt::Debug;
-use std::time::Instant;
-
+use crate::{
+    types::{AccountInfo, Env},
+    utils::addr,
+};
 use foundry_evm::{
-    executor::{fork::CreateFork, opts::EvmOpts, Backend, Executor, ExecutorBuilder},
+    backend::Backend,
+    executors::{Executor, ExecutorBuilder},
+    fork::CreateFork,
+    opts::EvmOpts,
     utils::RuntimeOrHandle,
 };
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use revm::{primitives::U256, Database};
-
-use crate::{
-    types::{AccountInfo, Env},
-    utils::addr,
-};
+use std::fmt::Debug;
+use std::time::Instant;
 
 #[pyclass]
 pub struct EVM(Executor);
@@ -61,7 +62,7 @@ impl EVM {
         let db = RuntimeOrHandle::new().block_on(Backend::spawn(fork_opts));
 
         let executor = ExecutorBuilder::default()
-            .gas_limit(gas_limit.into())
+            .gas_limit(U256::from(gas_limit))
             .inspectors(|stack| stack.trace(tracing))
             .build(env.unwrap_or_default().into(), db);
 
@@ -129,7 +130,6 @@ impl EVM {
         }
 
         // TODO: Return the traces back to the user.
-        //dbg!(&res.traces);
         Ok(res.result.to_vec())
     }
 
@@ -155,10 +155,7 @@ impl EVM {
             //return Err(pyerr(res.exit_reason));
         }
 
-        //dbg!(&res.traces);
-        //Ok(res.result.to_vec())
         Ok(timer.elapsed().as_nanos().try_into().unwrap())
-
     }
 
     /// Deploy a contract with the given code.
@@ -179,7 +176,6 @@ impl EVM {
             )
             .map_err(pyerr)?;
 
-        //dbg!(&res.traces);
         Ok(format!("{:?}", res.address))
     }
 }
